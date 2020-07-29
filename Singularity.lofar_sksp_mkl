@@ -1,8 +1,8 @@
-Bootstrap: shub
-From: tikk3r/lofar-grid-hpccloud:lofar_sksp_base
+#Bootstrap: shub
+#From: tikk3r/lofar-grid-hpccloud:lofar_sksp_base
 # If building from a base image locally enable this instead.
-#Bootstrap: localimage
-#From: lofar_sksp_fedora27_base.sif
+Bootstrap: localimage
+From: lofar_sksp_fedora27_base_mkl.sif
 
 %environment
     export PYTHONPATH=
@@ -33,8 +33,9 @@ From: tikk3r/lofar-grid-hpccloud:lofar_sksp_base
     # Haven't figured out how to successfully build 1.9.2 yet...
 	export PYBDSF_VERSION=6ce374d
 	export PYTHON_CASACORE_VERSION=v2.2.1
-	export WSCLEAN_VERSION=latest
+	export WSCLEAN_VERSION=v2.10
 	export HDF5_USE_FILE_LOCKING=FALSE
+    export MKLROOT=/opt/intel/mkl
 
     export CC=`which gcc`
 	export CXX=`which g++`
@@ -44,18 +45,13 @@ From: tikk3r/lofar-grid-hpccloud:lofar_sksp_base
     export CPLUS_INCLUDE_PATH="/usr/include/openmpi-x86_64:/usr/include/c++/9:$CPLUS_INCLUDE_PATH:/usr/include/python2.7:$INSTALLDIR/casacore/include:/usr/include/boost:/usr/include/cfitsio"
     export CPATH="/usr/include/openmpi-x86_64/:/opt/intel/mkl/include:${INSTALLDIR}/casacore/include:$INSTALLDIR/LOFARBeam/include:$INSTALLDIR/idg/include:$INSTALLDIR/aoflagger/include:$CPATH"
     export CMAKE_PREFIX_PATH="$INSTALLDIR/aoflagger:$INSTALLDIR/casacore:$INSTALLDIR/lofar:$INSTALLDIR/LOFARBeam:/usr/lib64/openmpi"
-    export LD_LIBRARY_PATH="$INSTALLDIR/aoflagger/lib:$INSTALLDIR/casacore/lib:$INSTALLDIR/idg/lib:$INSTALLDIR/LOFARBeam/lib:/usr/lib64/openmpi/lib/:LD_LIBRARY_PATH"
+    export LD_LIBRARY_PATH="$MKLROOT/lib/intel64:/opt/intel/lib/intel64/lib:$INSTALLDIR/aoflagger/lib:$INSTALLDIR/armadillo/lib:$INSTALLDIR/casacore/lib:$INSTALLDIR/idg/lib:$INSTALLDIR/LOFARBeam/lib:/usr/lib64/openmpi/lib/:LD_LIBRARY_PATH"
     export PATH="/usr/lib64/openmpi/bin:$PATH"
     export make=`which make`
     export OLD_PYTHONPATH=$PYTHONPATH
 
 	mkdir -p $INSTALLDIR
 
-    # Symlinks required for Fedora 31
-	#ln -s /usr/lib64/libboost_python37.so /usr/lib64/libboost_python3.so
-	#ln -s /usr/lib64/libboost_numpy37.so /usr/lib64/libboost_numpy3.so
-	#ln -s /usr/lib64/libboost_python27.so /usr/lib64/libboost_python.so
-	#ln -s /usr/lib64/libboost_numpy27.so /usr/lib64/libboost_numpy.so
 	# Symlinks required for Fedora 27
 	ln -s /usr/lib64/libboost_python3.so /usr/lib64/libboost_python36.so
 	ln -s /usr/lib64/libboost_numpy3.so /usr/lib64/libboost_numpy36.so
@@ -132,7 +128,7 @@ From: tikk3r/lofar-grid-hpccloud:lofar_sksp_base
     #cd $INSTALLDIR/casacore/src && patch --fuzz 3 -p1 < $INSTALLDIR/casacore/1033.patch
 	cd ${INSTALLDIR}/casacore/data && wget --retry-connrefused ftp://anonymous@ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
 	cd ${INSTALLDIR}/casacore/data && tar xf WSRT_Measures.ztar && rm WSRT_Measures.ztar
-	cd ${INSTALLDIR}/casacore/build && cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/casacore/ -DDATA_DIR=${INSTALLDIR}/casacore/data -DBUILD_PYTHON=True -DUSE_OPENMP=True -DUSE_FFTW3=TRUE -DUSE_HDF5=True -DBUILD_PYTHON3=False ../src/ 
+	cd ${INSTALLDIR}/casacore/build && cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/casacore/ -DDATA_DIR=${INSTALLDIR}/casacore/data -DBUILD_PYTHON=True -DUSE_OPENMP=True -DUSE_FFTW3=TRUE -DUSE_HDF5=True -DBUILD_PYTHON3=False -DBLAS_LIBRARIES:FILEPATH=$MKLROOT/lib/intel64/libblas_mkl.so -DLAPACK_LIBRARIES:FILEPATH=$MKLROOT/lib/intel64/liblapack_mkl.so ../src/ 
 	cd ${INSTALLDIR}/casacore/build && $make -s -j ${J}
 	cd ${INSTALLDIR}/casacore/build && $make install
     cd $INSTALLDIR
@@ -219,7 +215,7 @@ From: tikk3r/lofar-grid-hpccloud:lofar_sksp_base
     cd $INSTALLDIR/DPPP/src
     git checkout tags/v4.2
     cd $INSTALLDIR/DPPP/build
-    cmake3 -DCMAKE_CXX_FLAGS="-D_GLIB_USE_CXX_ABI=1 -DBOOST_NO_CXX11_SCOPED_ENUMS" -DCMAKE_INSTALL_PREFIX:PATH=$INSTALLDIR/DPPP -DLOFAR_STATION_RESPONSE_DIR:PATH=$INSTALLDIR/lofar/include -DLOFAR_STATION_RESPONSE_LIB:FILEPATH=$INSTALLDIR/lofar/lib/libstationresponse.so -DIDGAPI_LIBRARIES=$INSTALLDIR/idg/lib/libidg-api.so -DIDGAPI_INCLUDE_DIRS=$INSTALLDIR/idg/include -DAOFLAGGER_INCLUDE_DIR=$INSTALLDIR/aoflagger/include -DAOFLAGGER_LIB=$INSTALLDIR/aoflagger/lib/libaoflagger.so ../src
+    cmake3 -DCMAKE_CXX_FLAGS="-D_GLIB_USE_CXX_ABI=1 -DBOOST_NO_CXX11_SCOPED_ENUMS" -DCMAKE_INSTALL_PREFIX:PATH=$INSTALLDIR/DPPP -DLOFAR_STATION_RESPONSE_DIR:PATH=$INSTALLDIR/lofar/include -DLOFAR_STATION_RESPONSE_LIB:FILEPATH=$INSTALLDIR/lofar/lib/libstationresponse.so -DIDGAPI_LIBRARIES=$INSTALLDIR/idg/lib/libidg-api.so -DIDGAPI_INCLUDE_DIRS=$INSTALLDIR/idg/include -DAOFLAGGER_INCLUDE_DIR=$INSTALLDIR/aoflagger/include -DAOFLAGGER_LIB=$INSTALLDIR/aoflagger/lib/libaoflagger.so -DBLAS_openblas_LIBRARY:FILEPATH=$MKLROOT/lib/intel64/libblas_mkl.so -DLAPACK_openblas_LIBRARY:FILEPATH=$MKLROOT/lib/intel64/liblapack_mkl.so ../src
     $make -s -j $J && $make install
     cd $INSTALLDIR
     rm -rf $INSTALLDIR/DPPP/build
@@ -288,9 +284,10 @@ From: tikk3r/lofar-grid-hpccloud:lofar_sksp_base
     #
     # Install-WSClean
     #
-    mkdir $INSTALLDIR/wsclean
-    if [ "$WSCLEAN_VERSION" != "latest" ]; then cd ${INSTALLDIR}/wsclean && wget http://downloads.sourceforge.net/project/wsclean/wsclean-${WSCLEAN_VERSION}/wsclean-${WSCLEAN_VERSION}.tar.bz2 && tar -xjf wsclean-${WSCLEAN_VERSION}.tar.bz2 && cd wsclean-${WSCLEAN_VERSION}; fi
-    if [ "$WSCLEAN_VERSION" = "latest" ]; then cd ${INSTALLDIR}/wsclean && git clone git://git.code.sf.net/p/wsclean/code src && cd src && cd wsclean; fi
+    mkdir -p $INSTALLDIR/wsclean
+    if [ "$WSCLEAN_VERSION" != "latest" ]; then cd ${INSTALLDIR}/wsclean && git clone https://gitlab.com/aroffringa/wsclean.git src && cd src && git checkout $WSCLEAN_VERSION; fi
+    if [ "$WSCLEAN_VERSION" = "latest" ]; then cd ${INSTALLDIR}/wsclean && git clone https://gitlab.com/aroffringa/wsclean.git src && cd src; fi
+    cd wsclean
     mkdir build && cd build
     # Switch to mpicc for a minute
     export CC=`which mpicc`
@@ -345,7 +342,8 @@ From: tikk3r/lofar-grid-hpccloud:lofar_sksp_base
 	echo export PATH=\$INSTALLDIR/lofar/bin:\$PATH  >> $INSTALLDIR/init.sh
 	echo export PATH=\$INSTALLDIR/wsclean/bin:\$PATH  >> $INSTALLDIR/init.sh
     echo export PATH=/usr/lib64/openmpi/bin:\$PATH >> $INSTALLDIR/init.sh
-	echo export LD_LIBRARY_PATH=\$INSTALLDIR/aoflagger/lib:\$INSTALLDIR/casacore/lib:\$INSTALLDIR/DPPP/lib:\$INSTALLDIR/dysco/lib:\$INSTALLDIR/idg/lib:\$INSTALLDIR/lofar/lib:\$INSTALLDIR/lofar/lib64:\$INSTALLDIR/LOFARBeam/lib:\$LD_LIBRARY_PATH  >> $INSTALLDIR/init.sh
+    echo export MKLROOT=/opt/intel/mkl >> $INSTALLDIR/init.sh
+	echo export LD_LIBRARY_PATH=\$MKLROOT/lib/intel64:/opt/intel/lib/intel64:\$INSTALLDIR/aoflagger/lib:\$INSTALLDIR/armadillo/lib:\$INSTALLDIR/casacore/lib:\$INSTALLDIR/DPPP/lib:\$INSTALLDIR/dysco/lib:\$INSTALLDIR/idg/lib:\$INSTALLDIR/lofar/lib:\$INSTALLDIR/lofar/lib64:\$INSTALLDIR/LOFARBeam/lib:\$LD_LIBRARY_PATH  >> $INSTALLDIR/init.sh
     echo export LD_LIBRARY_PATH=/opt/intel/mkl/lib/intel64:\$LD_LIBRARY_PATH >> $INSTALLDIR/init.sh
     echo export LD_LIBRARY_PATH=/usr/lib64/openmpi/lib/:\$LD_LIBRARY_PATH >> $INSTALLDIR/init.sh
 	echo export OPENBLAS_NUM_THREADS=64 >> $INSTALLDIR/init.sh

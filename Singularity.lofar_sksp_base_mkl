@@ -25,6 +25,8 @@ From: fedora:27
 	export SUPERLU_VERSION=v5.1
 	export WCSLIB_VERSION=5.16
     export DEBIAN_FRONTEND=noninteractive
+    export MKLROOT=/opt/intel/mkl
+    export LD_LIBRARY_PATH=$MKLROOT/intel64/lib:/opt/intel/lib/intel64/lib:$LD_LIBRARY_PATH
 
     #
     # System installs
@@ -35,7 +37,7 @@ From: fedora:27
 	dnf -y install git svn wget vim nano
 	dnf -y install automake autoconf cmake make
 	dnf -y install gcc gcc-c++ gcc-gfortran
-	dnf -y install arpack-devel python-devel python3-devel lapack-devel libpng-devel libxml2-devel readline-devel ncurses-devel f2py bzip2-devel libicu-devel scipy python-setuptools gsl gsl-devel gdal gdal-devel libpqxx libpqxx-devel
+	dnf -y install arpack-devel python-devel python3-devel lapack-devel libpng-devel libxml2-devel readline-devel ncurses-devel f2py bzip2-devel libicu-devel scipy python-setuptools gsl gsl-devel gdal gdal-devel libpqxx libpqxx-devel xz
 	dnf -y install bison flex ncurses tar bzip2 which gettext
 	dnf -y install cmake3
     dnf -y install hdf5
@@ -50,6 +52,11 @@ From: fedora:27
     dnf -y install python3-numpy-f2py
     dnf -y install qt5
 
+	#
+	# Install OpenBLAS
+	#
+	dnf -y install blas-devel
+
     #
     # Install Boost
     #
@@ -61,39 +68,10 @@ From: fedora:27
     dnf -y install fftw-devel fftw-libs
 
 	#
-	# Install OpenBLAS
-	#
-	dnf -y install blas-devel
-
-	#
 	# Install SuperLU
 	#
 	dnf -y install SuperLU SuperLU-devel
 
-	#
-	# Install Armadillo
-	#
-	dnf -y install armadillo armadillo-devel
-
-    # 
-    # Setup environment variables used during build
-    #
-    export CC=`which gcc`
-	export CXX=`which g++`
-    export CFLAGS="-mno-avx512f -mno-avx512pf -mno-avx512er -mno-avx512cd -mno-avx512vl -mno-avx512bw -mno-avx512dq -mno-avx512ifma -mno-avx512vbmi"
-    export CXXFLAGS="-std=c++11 -mno-avx512f -mno-avx512pf -mno-avx512er -mno-avx512cd -mno-avx512vl -mno-avx512bw -mno-avx512dq -mno-avx512ifma -mno-avx512vbmi"
-    export make=`which make`
-
-	mkdir -p $INSTALLDIR
-    export LD_LIBRARY_PATH=/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
-    export CMAKE_PREFIX_PATH=/opt/intel/mkl/lib/intel64:$CMAKE_PREFIX_PATH
-    export CPATH=/opt/intel/mkl/include:$CPATH
-    export CFLAGS="-mno-avx512f -mno-avx512pf -mno-avx512er -mno-avx512cd -mno-avx512vl -mno-avx512bw -mno-avx512dq -mno-avx512ifma -mno-avx512vbmi"
-    export CXXFLAGS="-mno-avx512f -mno-avx512pf -mno-avx512er -mno-avx512cd -mno-avx512vl -mno-avx512bw -mno-avx512dq -mno-avx512ifma -mno-avx512vbmi"
-
-    ###################
-    # Source installs #
-    ###################
 	#
 	# Install cfitsio
 	#
@@ -104,12 +82,53 @@ From: fedora:27
 	#
     dnf -y install wcslib wcslib-devel 
 
+    # 
+    # Setup environment variables used during builds
+    #
+    export CC=`which gcc`
+	export CXX=`which g++`
+    export CFLAGS="-mno-avx512f -mno-avx512pf -mno-avx512er -mno-avx512cd -mno-avx512vl -mno-avx512bw -mno-avx512dq -mno-avx512ifma -mno-avx512vbmi"
+    export CXXFLAGS="-std=c++11 -mno-avx512f -mno-avx512pf -mno-avx512er -mno-avx512cd -mno-avx512vl -mno-avx512bw -mno-avx512dq -mno-avx512ifma -mno-avx512vbmi"
+    export make=`which make`
+
+	mkdir -p $INSTALLDIR
+    export LD_LIBRARY_PATH="$MKLROOT/intel64/lib:/opt/intel/lib/intel64/lib:$LD_LIBRARY_PATH"
+    export CMAKE_PREFIX_PATH="/opt/intel/mkl/lib/intel64:$CMAKE_PREFIX_PATH"
+    export CPATH="/opt/intel/mkl/include/fftw/:/opt/intel/mkl/include:$CPATH"
+    export CFLAGS="-mno-avx512f -mno-avx512pf -mno-avx512er -mno-avx512cd -mno-avx512vl -mno-avx512bw -mno-avx512dq -mno-avx512ifma -mno-avx512vbmi"
+    export CXXFLAGS="-mno-avx512f -mno-avx512pf -mno-avx512er -mno-avx512cd -mno-avx512vl -mno-avx512bw -mno-avx512dq -mno-avx512ifma -mno-avx512vbmi"
+    
     #
     # Install Intel MKL
     #
     sudo dnf config-manager --add-repo https://yum.repos.intel.com/mkl/setup/intel-mkl.repo
     sudo rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-    dnf -y install intel-mkl intel-mkl-64bit
+    dnf -y install intel-mkl-2020.0-088 intel-mkl-64bit-2020.0-088
+
+    # Now build the MKL BLAS and LAPACK libraries.
+    # https://wiki.cncz.science.ru.nl/Intel_compilers
+    cd /opt/intel/mkl/lib/intel64
+    cp /opt/intel/mkl/tools/builder/{makefile,blas_example_list,lapack_example_list} .
+    # Use ILP64 interface to support 64 bit
+    make libintel64 export=blas_example_list interface=ilp64 threading=parallel name=libblas_mkl
+    make libintel64 export=lapack_example_list interface=ilp64 threading=parallel name=liblapack_mkl
+    # Make it so the linker can find libiomp5.so for casacore
+    echo /opt/intel/lib/intel64 > /etc/ld.so.conf.d/mkl.conf
+
+	#
+	# Install Armadillo linked against Intel MKL
+	#
+	# dnf -y install armadillo armadillo-devel
+    mkdir -p $INSTALLDIR/armadillo
+    cd $INSTALLDIR/armadillo
+    wget http://sourceforge.net/projects/arma/files/armadillo-9.900.2.tar.xz
+    tar xf armadillo-9.900.2.tar.xz
+    cd armadillo-9.900.2
+    cmake -DCMAKE_INSTALL_PREFIX=$INSTALLDIR/armadillo .
+    make -j$J
+    make install
+    cd $INSTALLDIR
+    rm -rf $INSTALLDIR/armadillo/armadillo-9.900.2 *.tar.xz
 
     #   
     # Install Image Domain Gridder (IDG)
@@ -141,8 +160,8 @@ From: fedora:27
 %runscript
     echo source $INSTALLDIR/init.sh >> $HOME/.bashrc
     echo export PATH=\$PATH >> $INSTALLDIR/init.sh
-    echo export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH >> $INSTALLDIR/init.sh
-    . $INSTALLDIR/init.sh
+    echo export MKLROOT=/opt/intel/mkl >> $INSTALLDIR/init.sh
+    echo export LD_LIBRARY_PATH=$MKLROOT/intel64/lib:/opt/intel/lib/intel64/lib:\$INSTALLDIR/armadillo/lib:\$LD_LIBRARY_PATH >> $INSTALLDIR/init.sh
 
 %help
     This Singularity image acts as a base for the LOFAR installation. It has Fedora 31 setup, with the required dependencies installed. These are:
