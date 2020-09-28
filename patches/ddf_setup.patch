@@ -1,0 +1,11 @@
+--- src/setup.py	2020-09-28 12:34:05.509711195 +0200
++++ src/setup-new.py	2020-09-28 14:41:14.718625840 +0200
+@@ -142,7 +142,7 @@
+                     ("pybind11 >= 2.2.2", "pybind11 >= 2.2.2"),
+                     ("dask[array] >= 1.1.0", "dask[array] == 2.11.0"),
+                     ("codex-africanus[dask] <= 0.1.8", "codex-africanus[dask]"),
+-                    ("bdsf > 1.8.15", "bdsf<=1.8.15") # SkyModel / kms dependency
++                    ("bdsf > 1.8.15", "bdsf>=1.8.15") # SkyModel / kms dependency
+                     ] 
+ 
+     py3_requirements, py2_requirements = zip(*requirements)
