@@ -1,0 +1,19 @@
+*** src/DDFacet/Imager/ClassFacetMachineTessel.py       Mon Sep 28 12:34:05 2020
+--- src/DDFacet/Imager/ClassFacetMachineTessel-new.py   Thu Oct 22 13:21:58 2020
+*************** class ClassFacetMachineTessel(ClassFacet
+*** 199,205 ****
+          rac, decc = self.MainRaDec
+          VM = ModVoronoiToReg.VoronoiToReg(rac, decc)
+  
+!         if NFacets > 2:
+  
+              vor = Voronoi(xy, furthest_site=False)
+              regions, vertices = ModVoronoi.voronoi_finite_polygons_2d(
+--- 199,205 ----
+          rac, decc = self.MainRaDec
+          VM = ModVoronoiToReg.VoronoiToReg(rac, decc)
+  
+!         if NFacets >= 2:
+  
+              vor = Voronoi(xy, furthest_site=False)
+              regions, vertices = ModVoronoi.voronoi_finite_polygons_2d(
