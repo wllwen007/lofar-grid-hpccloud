@@ -1,0 +1,19 @@
+*** src/DDFacet/Imager/ClassDeconvMachine.py	Thu Oct 22 15:15:45 2020
+--- src/DDFacet/Imager/ClassDeconvMachine-new.py	Thu Oct 22 15:17:07 2020
+*************** def handle_user_stop_signal(signum, fram
+*** 103,109 ****
+      global user_stopped
+      user_stopped = True
+  
+! signal.signal(signal.SIGUSR1, handler=handle_user_stop_signal)
+  
+  class ClassImagerDeconv():
+      def __init__(self, GD=None,
+--- 103,109 ----
+      global user_stopped
+      user_stopped = True
+  
+! signal.signal(signal.SIGUSR1, handle_user_stop_signal)
+  
+  class ClassImagerDeconv():
+      def __init__(self, GD=None,
